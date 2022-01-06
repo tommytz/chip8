@@ -61,11 +61,11 @@ void disassembleChip8Opcode(uint8_t *codebuffer, int pc) {
                 case 1: printf("V%01X = V%01X OR V%01X", opcode[0]&0xf, opcode[0]&0xf, opcode[1]>>4); break;
                 case 2: printf("V%01X = V%01X AND V%01X", opcode[0]&0xf, opcode[0]&0xf, opcode[1]>>4); break;
                 case 3: printf("V%01X = V%01X XOR V%01X", opcode[0]&0xf, opcode[0]&0xf, opcode[1]>>4); break;
-                case 4: printf("V%01X += V%01X", opcode[0]&0xf, opcode[1]>>4); break;
-                case 5: printf("V%01X -= V%01X", opcode[0]&0xf, opcode[1]>>4); break;
-                case 6: printf("V%01X >>= 1", opcode[0]&0xf); break; // right bit shift
-                case 7: printf("V%01X = V%01X - V%01X", opcode[0]&0xf, opcode[1]>>4, opcode[0]&0xf); break;
-                case 0xe: printf("V%01X <<= 1", opcode[0]&0xf); break; // left bit shift
+                case 4: printf("V%01X += V%01X, VF FLAG", opcode[0]&0xf, opcode[1]>>4); break;
+                case 5: printf("V%01X -= V%01X, VF FLAG", opcode[0]&0xf, opcode[1]>>4); break;
+                case 6: printf("V%01X >>= 1, VF FLAG", opcode[0]&0xf); break; // right bit shift
+                case 7: printf("V%01X = V%01X - V%01X, VF FLAG", opcode[0]&0xf, opcode[1]>>4, opcode[0]&0xf); break;
+                case 0xe: printf("V%01X <<= 1, VF FLAG", opcode[0]&0xf); break; // left bit shift
                 default: printf("UNKNOWN 8"); break;
             }
         } break;
@@ -73,13 +73,25 @@ void disassembleChip8Opcode(uint8_t *codebuffer, int pc) {
         case 0x0a: printf("I = %01X%02X", opcode[0]&0xf, opcode[1]); break;
         case 0x0b: printf("JUMP %01X%02X + V0", opcode[0]&0xf, opcode[1]); break;
         case 0x0c: printf("V%01X = RND AND %02X", opcode[0]&0xf, opcode[1]); break;
-        case 0x0d: printf("DRAW %01X (V%01X, V%01X)", opcode[1]&0xf, opcode[0]&0xf, opcode[1]>>4); break;
+        case 0x0d: printf("DRAW %01X (V%01X, V%01X), VF FLAG", opcode[1]&0xf, opcode[0]&0xf, opcode[1]>>4); break;
         case 0x0e:
             switch(opcode[1]) {
                 case 0x9e: printf("SKIP V%01X P", opcode[0]&0xf); break; // skip if key with value of VX is pressed
                 case 0xa1: printf("SKIP V%01X NP", opcode[0]&0xf); break; // skip if key with value of VX is NOT pressed
                 default: printf("UNKNOWN E"); break;
             } break;
-        case 0x0f: printf("f instruction not handled yet"); break;
+        case 0x0f:
+            switch(opcode[1]) {
+                case 0x07: printf("V%01X = DELAY", opcode[0]&0xf); break;
+                case 0x0a: printf("V%01X = WAITKEY", opcode[0]&0xf); break;
+                case 0x15: printf("DELAY = V%01X", opcode[0]&0xf); break;
+                case 0x18: printf("SOUND = V%01X", opcode[0]&0xf); break;
+                case 0x1e: printf("I += V%01X", opcode[0]&0xf); break;
+                case 0x29: printf("I = SPRITE, V%01X", opcode[0]&0xf); break;
+                case 0x33: printf("I,I+1,I+2 = BCD V%01X", opcode[0]&0xf); break;
+                case 0x55: printf("MEM[I..I+%01X] = V[0..%01X]", opcode[0]&0xf, opcode[0]&0xf); break;
+                case 0x65: printf("V[0..%01X] = MEM[I..I+%01X]", opcode[0]&0xf, opcode[0]&0xf); break;
+                default: printf("UNKNOWN F"); break;
+            } break;
     }
 }
