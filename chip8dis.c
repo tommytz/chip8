@@ -1,47 +1,34 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
+#include "chip8dis.h"
 
-// Macros to extract the opcode values
-#define CONCAT(x, y) ((x << 8) | y)
-#define INSTR_MASK(x) (x >> 12)
-#define VX_MASK(x) ((x & 0x0f00) >> 8)
-#define VY_MASK(x) ((x & 0x00f0) >> 4)
-#define NN_MASK(x) (x & 0x00ff)
-#define NNN_MASK(x) (x & 0x0fff)
-#define LSN_MASK(x) (x & 0x000f)
-
-void disassembleChip8Opcode(uint8_t *buffer, int pc);
-
-int main(int argc, char **argv) {
-    // Open rom from command line arguments. Rom name has to be in quotation marks.
-    FILE *rom = fopen(argv[1], "rb"); // argv[1] is the rom name
-    if (rom == NULL) {
-        printf("Error: Couldn't open %s\n", argv[1]);
-        exit(EXIT_FAILURE);
-    }
-
-    // Get the rom size
-    fseek(rom, 0L, SEEK_END);
-    int fsize = ftell(rom);
-    fseek(rom, 0L, SEEK_SET);
-
-    // CHIP-8 programs are put in memory at 0x200
-    // Read the rom into memory at 0x200 and close it
-    unsigned char *buffer = malloc(fsize + 0x200);
-    fread(buffer + 0x200, fsize, 1, rom);
-    fclose(rom);
-
-    // Set the program counter to 0x200 and iterate over buffer
-    int pc = 0x200;
-    while (pc < fsize + 0x200) {
-        disassembleChip8Opcode(buffer, pc);
-        pc += 2;
-        printf("\n");
-    }
-    free(buffer);
-    return 0;
-}
+// int main(int argc, char **argv) {
+//     // Open rom from command line arguments. Rom name has to be in quotation marks.
+//     FILE *rom = fopen(argv[1], "rb"); // argv[1] is the rom name
+//     if (rom == NULL) {
+//         printf("Error: Couldn't open %s\n", argv[1]);
+//         exit(EXIT_FAILURE);
+//     }
+//
+//     // Get the rom size
+//     fseek(rom, 0L, SEEK_END);
+//     int fsize = ftell(rom);
+//     fseek(rom, 0L, SEEK_SET);
+//
+//     // CHIP-8 programs are put in memory at 0x200
+//     // Read the rom into memory at 0x200 and close it
+//     unsigned char *buffer = malloc(fsize + 0x200);
+//     fread(buffer + 0x200, fsize, 1, rom);
+//     fclose(rom);
+//
+//     // Set the program counter to 0x200 and iterate over buffer
+//     int pc = 0x200;
+//     while (pc < fsize + 0x200) {
+//         disassembleChip8Opcode(buffer, pc);
+//         pc += 2;
+//         printf("\n");
+//     }
+//     free(buffer);
+//     return 0;
+// }
 
 void disassembleChip8Opcode(uint8_t *buffer, int pc) {
     // pc == 0x200 because all chip-8 programs start at 0x200 in RAM
