@@ -45,7 +45,7 @@ void disassembleChip8Opcode(uint8_t *buffer, int pc) {
     printf("%04X %04X : ", pc, opcode);
     switch(instr) {
         case 0x0:
-            switch(op[1]) {
+            switch(nn) {
                 case 0xe0: printf("CLS"); break; // clear screen
                 case 0xee: printf("RETURN"); break; // return from subroutine
                 default: printf("UNKNOWN 0"); break; // usually jump to machine code routine at NNN
