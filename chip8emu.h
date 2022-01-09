@@ -4,16 +4,19 @@
 #include <string.h>
 #include <SDL2/SDL.h>
 
-#define SCREEN_WIDTH 640
-#define SCREEN_HEIGHT 320
+#define SCREEN_WIDTH 64
+#define SCREEN_HEIGHT 32
+#define SCALE 10
+#define COORDINATE_INDEX(x,y) (x+y*SCREEN_WIDTH)
 
 typedef struct Chip8State {
-	uint8_t    v[16]; // The 16 variable 8-bit registers V0..VF
-	uint16_t   i, sp, pc; // index register, stack pointer, and program counter
+	uint8_t    V[16]; // The 16 variable 8-bit registers V0..VF
+	uint16_t   I, SP, PC; // index register, stack pointer, and program counter
 	uint8_t	   delay, sound;
 	uint8_t	   *memory;
-    uint8_t    *display;
+    uint8_t    *gfx;
     int     halt;
+	int 	draw_flag;
 } Chip8State;
 
 Chip8State* InitChip8(void);
@@ -36,6 +39,6 @@ void op9(Chip8State *state, uint16_t opcode);
 void opA(Chip8State *state, uint16_t opcode);
 void opB(Chip8State *state, uint16_t opcode);
 void opC(Chip8State *state, uint16_t opcode);
-// void opD(Chip8State *state, uint16_t opcode);
+void opD(Chip8State *state, uint16_t opcode);
 // void opE(Chip8State *state, uint16_t opcode);
 // void opF(Chip8State *state, uint16_t opcode);
