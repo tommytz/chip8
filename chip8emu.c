@@ -44,6 +44,8 @@ int main(int argc, char **argv) {
         SDL_Delay(250);
     }
     return 0;
+    free(c8->memory);
+    free(c8->gfx);
     free(c8);
     terminate(EXIT_SUCCESS);
 }
@@ -223,18 +225,28 @@ void opD(Chip8State *state, uint16_t opcode) {
     uint8_t x = state->V[VX_MASK(opcode)] % 64;
     uint8_t y = state->V[VY_MASK(opcode)] % 32;
     uint8_t height = LSN_MASK(opcode); // number of lines of sprite data
-    uint8_t pixel;
+    uint8_t sprite_byte;
+    uint8_t sprite_pixel;
+    uint32_t *screen_pixel;
+
     state->V[0xF] = 0;
+    for(int row = 0; row < height; row++){
 
-    for(int i = 0; i < height; i++){
-        pixel = state->memory[i + state->I];
+        sprite_byte = state->memory[state->I + row];
 
-        for(int j = 0; j < 8; j++){
-            if(pixel & (0x80 >> j)){
-                if(state->gfx[(x+j) + ((y + 1) * SCREEN_WIDTH)]); {
+        for(int col = 0; col < 8; col++){
+
+            int address = (x+col) + (y + row) * SCREEN_WIDTH;
+            sprite_pixel = sprite_byte & (0x80 >> col);
+            screen_pixel = &state->gfx[address];
+
+            // Sprite pixel is ON
+            if(sprite_pixel){
+
+                if(*screen_pixel) {
                     state->V[0xF] = 1;
                 }
-                state->gfx[(x+j) + ((y + 1) * SCREEN_WIDTH)] ^= ON;
+                *screen_pixel ^= ON;
             }
         }
     }

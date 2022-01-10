@@ -6,7 +6,7 @@
 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
-#define SCALE 20
+#define SCALE 10
 #define ON 0xFFFFFFFF
 #define OFF 0x00000000
 
