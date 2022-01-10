@@ -125,7 +125,7 @@ void EmulateChip8Op(Chip8State *state)
         case 0x05: op5(state, opcode); break;
         case 0x06: op6(state, opcode); break;
         case 0x07: op7(state, opcode); break;
-        case 0x08: UnimplementedInstruction(state); break;
+        case 0x08: op8(state, opcode); break;
         case 0x09: op9(state, opcode); break;
         case 0x0a: opA(state, opcode); break;
         case 0x0b: opB(state, opcode); break;
@@ -149,7 +149,7 @@ void op0(Chip8State *state, uint16_t opcode) {
             memset(state->gfx, OFF, 64*32);
             break;
         case 0xee: printf("RETURN"); break; // return from subroutine
-        default: printf("UNKNOWN 0"); break; // usually jump to machine code routine at NNN
+        default: printf("UNKNOWN 0 INSTRUCTION"); break; // usually jump to machine code routine at NNN
     }
 }
 
@@ -196,7 +196,51 @@ void op7(Chip8State *state, uint16_t opcode) {
     state->V[VX_MASK(opcode)] += NN_MASK(opcode);
 }
 
-// void op8(Chip8State *state, uint16_t opcode);
+void op8(Chip8State *state, uint16_t opcode) {
+    uint8_t x = state->V[VX_MASK(opcode)];
+    uint8_t y = state->V[VY_MASK(opcode)];
+
+    switch (LSN_MASK(opcode)) {
+        case 0x0: // VX = VY
+            state->V[x] = state->V[y]; break;
+        case 0x1: // VX = VX OR VY
+            state->V[x] |= state->V[y]; break;
+        case 0x2: // VX = VX AND VY
+            state->V[x] &= state->V[y]; break;
+        case 0x3: // VX = VX XOR VY
+            state->V[x] ^= state->V[y]; break;
+        case 0x4: // VX = VX + VY, VF = Carry (ie result > 255, 8-bit overflow)
+            uint16_t result = state->V[x] + state->V[y];
+            if (result & 0xFF00) {
+                state->V[0xF] = 1;
+            } else {
+                state->V[0xF] = 0;
+            }
+            // Only set the 8-bit result in the register
+            state->V[x] = (result&0xFF); break;
+        case 0x5: // VX = VX - VY, VF = !borrow (0 if a borrow occurs on underflow, otherwise 1)
+            uint8_t borrow = (state->V[x] > state->V[y]);
+            state->V[x] -= state->V[y];
+            state->V[0xF] = borrow; break;
+        case 0x6: // VX = (VX or VY, it's not clear in technical reference) >> 1, VF = LSB
+            state->V[x] = state->V[y];
+            uint8_t lsb = state->V[x] & 0x1; // least-significant bit
+			state->V[x] = state->V[x] >> 1;
+			state->V[0xF] = lsb;
+            break;
+        case 0x7: // VX = VY - VX, VF = !borrow (0 if a borrow occurs on underflow, otherwise 1)
+            uint8_t borrow = (state->V[y] > state->V[x]);
+            state->V[x] = state->V[y] - state->V[x];
+            state->V[0xF] = borrow; break;
+        case 0xE: // VX = (VX or VY, it's not clear in technical reference) << 1, VF = MSB
+            state->V[x] = state->V[y];
+            uint8_t msb = state->V[x] & 0x80; // most-significant bit
+			state->V[x] = state->V[x] << 1;
+			state->V[0xF] = msb;
+            break;
+        default: printf("UNKNOWN 8 INSTRUCTION"); break; // usually jump to machine code routine at NNN
+    }
+}
 
 void op9(Chip8State *state, uint16_t opcode) {
     // Skip the following instruction if VX != VY

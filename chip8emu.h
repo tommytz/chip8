@@ -36,7 +36,7 @@ void op4(Chip8State *state, uint16_t opcode);
 void op5(Chip8State *state, uint16_t opcode);
 void op6(Chip8State *state, uint16_t opcode);
 void op7(Chip8State *state, uint16_t opcode);
-// void op8(Chip8State *state, uint16_t opcode);
+void op8(Chip8State *state, uint16_t opcode);
 void op9(Chip8State *state, uint16_t opcode);
 void opA(Chip8State *state, uint16_t opcode);
 void opB(Chip8State *state, uint16_t opcode);
