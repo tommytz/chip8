@@ -6,15 +6,16 @@
 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
-#define SCALE 10
-#define COORDINATE_INDEX(x,y) (x+y*SCREEN_WIDTH)
+#define SCALE 20
+#define ON 0xFFFFFFFF
+#define OFF 0x00000000
 
 typedef struct Chip8State {
 	uint8_t    V[16]; // The 16 variable 8-bit registers V0..VF
 	uint16_t   I, SP, PC; // index register, stack pointer, and program counter
 	uint8_t	   delay, sound;
 	uint8_t	   *memory;
-    uint8_t    *gfx;
+    uint32_t    *gfx;
     int     halt;
 	int 	draw_flag;
 } Chip8State;
@@ -22,6 +23,7 @@ typedef struct Chip8State {
 Chip8State* InitChip8(void);
 void InitDisplay(void);
 void terminate(int exit_code);
+void updateDisplay(Chip8State* chip8);
 void UnimplementedInstruction(Chip8State* state);
 void EmulateChip8Op(Chip8State *state);
 void displayState(Chip8State *state);

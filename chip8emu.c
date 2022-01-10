@@ -4,14 +4,12 @@
 SDL_Window *window;
 SDL_Renderer *renderer;
 SDL_Texture *texture;
-int pitch = 64;
+int pitch = 64*4;
 
 int main(int argc, char **argv) {
     Chip8State* c8 = InitChip8();
     InitDisplay();
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-    SDL_RenderPresent(renderer);
+    updateDisplay(c8);
 
     // Open rom from command line arguments. Rom name has to be in quotation marks.
     FILE *rom = fopen(argv[1], "rb"); // argv[1] is the rom name
@@ -40,12 +38,10 @@ int main(int argc, char **argv) {
             break;
         }
         if(c8->draw_flag){
-            SDL_LockTexture(texture, NULL, (void**) &c8->gfx, &pitch);
-            SDL_UnlockTexture(texture);
-            SDL_RenderCopy(renderer, texture, NULL, NULL);
-            SDL_RenderPresent(renderer);
+            updateDisplay(c8);
+            c8->draw_flag = 0;
         }
-        SDL_Delay(1000);
+        SDL_Delay(250);
     }
     return 0;
     free(c8);
@@ -57,7 +53,7 @@ Chip8State* InitChip8(void)
 	Chip8State* state = calloc(sizeof(Chip8State), 1);
 
 	state->memory = calloc(1024*4, 1);
-    state->gfx = calloc(64*32, 1);
+    state->gfx = calloc(64*32, sizeof(uint32_t));
 	state->SP = 0xfa0;
 	state->PC = 0x200;
     state->halt = 0;
@@ -71,49 +67,35 @@ void InitDisplay(void) {
         printf("Error: Failed to initialize SDL: %s\n", SDL_GetError());
         terminate(EXIT_FAILURE);
     }
-    window = SDL_CreateWindow("Chip-8",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        SCREEN_WIDTH*SCALE,
-        SCREEN_HEIGHT*SCALE,
-        SDL_WINDOW_SHOWN
-    );
+    window = SDL_CreateWindow("Chip-8", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
+        SCREEN_WIDTH*SCALE, SCREEN_HEIGHT*SCALE, SDL_WINDOW_SHOWN);
 
-    if (!window) {
-        printf("Error: Failed to open %d x %d window: %s\n", SCREEN_WIDTH, SCREEN_HEIGHT, SDL_GetError());
-        terminate(EXIT_FAILURE);
-    }
-
-    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "nearest");
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-    SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH*SCALE, SCREEN_HEIGHT*SCALE);
-
-    if (!renderer) {
-        printf("error: failed to create renderer: %s\n", SDL_GetError());
-        terminate(EXIT_FAILURE);
-    }
+    // 64x32 pixels, regardless of window size. Pixels will be stretched to fit.
+    SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888,
         SDL_TEXTUREACCESS_STREAMING, SCREEN_WIDTH, SCREEN_HEIGHT);
 
-        if (!texture) {
-            printf("error: failed to create texture: %s\n", SDL_GetError());
+        if (!window || !renderer || !texture) {
+            printf("Error: failed to initialise video: %s\n", SDL_GetError());
             terminate(EXIT_FAILURE);
         }
 }
 
 void terminate(int exit_code) {
-    if (texture) {
-        SDL_DestroyTexture(texture);
-    }
-    if (renderer) {
-        SDL_DestroyRenderer(renderer);
-    }
-    if (window) {
-        SDL_DestroyWindow(window);
-    }
+    SDL_DestroyTexture(texture);
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
     SDL_Quit();
     exit(exit_code);
+}
+
+void updateDisplay(Chip8State* chip8) {
+    SDL_UpdateTexture(texture, NULL, chip8->gfx, pitch);
+    SDL_RenderCopy(renderer, texture, NULL, NULL);
+    SDL_RenderPresent(renderer);
 }
 
 void UnimplementedInstruction(Chip8State* state)
@@ -162,7 +144,7 @@ void displayState(Chip8State * state) {
 void op0(Chip8State *state, uint16_t opcode) {
     switch (NN_MASK(opcode)) {
         case 0xe0: // clear screen
-            memset(state->gfx, 0, 64*32);
+            memset(state->gfx, OFF, 64*32);
             break;
         case 0xee: printf("RETURN"); break; // return from subroutine
         default: printf("UNKNOWN 0"); break; // usually jump to machine code routine at NNN
@@ -233,29 +215,27 @@ void opB(Chip8State *state, uint16_t opcode) {
 
 void opC(Chip8State *state, uint16_t opcode) {
     // Set VX to a random number with a mask of NN
-    state->V[VX_MASK(opcode)] = random() & NN_MASK(opcode);
+    // state->V[VX_MASK(opcode)] = random() & NN_MASK(opcode);
+    state->V[VX_MASK(opcode)] = rand() & NN_MASK(opcode);
 }
 
 void opD(Chip8State *state, uint16_t opcode) {
     uint8_t x = state->V[VX_MASK(opcode)] % 64;
     uint8_t y = state->V[VY_MASK(opcode)] % 32;
-    int array_coordinate = COORDINATE_INDEX(x,y);
     uint8_t height = LSN_MASK(opcode); // number of lines of sprite data
     uint8_t pixel;
     state->V[0xF] = 0;
-    printf("x = %02X, y = %02X, height = %02X, VF = %02X\n", x, y, height, state->V[0xF]);
 
-    for (int yl = 0; yl < height; yl++) {
-        pixel = state->memory[state->I + yl];
-        for (int xl = 0; xl < 8; xl++) {
-            printf("%d\n", array_coordinate);
-            if((pixel & (0x80 >> xl)) != 0){
-                if(state->gfx[array_coordinate] == 1){
+    for(int i = 0; i < height; i++){
+        pixel = state->memory[i + state->I];
+
+        for(int j = 0; j < 8; j++){
+            if(pixel & (0x80 >> j)){
+                if(state->gfx[(x+j) + ((y + 1) * SCREEN_WIDTH)]); {
                     state->V[0xF] = 1;
                 }
-                state->gfx[array_coordinate] ^= 1;
+                state->gfx[(x+j) + ((y + 1) * SCREEN_WIDTH)] ^= ON;
             }
-            array_coordinate += 1;
         }
     }
     state->draw_flag = 1;
