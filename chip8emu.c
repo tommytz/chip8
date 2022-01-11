@@ -28,20 +28,45 @@ int main(int argc, char **argv) {
     fread(&c8->memory[0x200], fsize, 1, rom);
     fclose(rom);
 
+    uint32_t previous_time = 0;
+    uint32_t current_time, delta;
+    int32_t time_accumulator;
+    const float timer_rate = 1000.0f / 60.0f; // 60 Hz
+
     // Set the program counter to 0x200 and iterate over buffer
     while (c8->PC < (fsize + 0x200)) {
+        current_time = SDL_GetTicks();
+        delta = current_time - previous_time;
+        previous_time = current_time;
+        time_accumulator += delta;
+
+        while(time_accumulator >= timer_rate){
+            if(c8->delay){
+                c8->delay--;
+            }
+            if(c8->sound){
+                c8->sound--;
+            }
+            time_accumulator -= timer_rate;
+        }
+        SDL_Event e;
+        while(SDL_PollEvent(&e)){
+            if (e.type == SDL_QUIT){
+                c8->halt = 1;
+            }
+        }
+
         EmulateChip8Op(c8);
         displayState(c8);
         printf("\n");
         if (c8->halt) {
-            terminate(EXIT_SUCCESS);
             break;
         }
         if(c8->draw_flag){
             updateDisplay(c8);
             c8->draw_flag = 0;
         }
-        SDL_Delay(250);
+        SDL_Delay(2);
     }
     return 0;
     free(c8->memory);
@@ -56,7 +81,10 @@ Chip8State* InitChip8(void)
 
 	state->memory = calloc(1024*4, 1);
     state->gfx = calloc(64*32, sizeof(uint32_t));
-	state->SP = 0xfa0;
+
+    memcpy(&state->memory[FONT_ADDRESS], fontset, FONT_SIZE);
+
+    state->SP = 0;
 	state->PC = 0x200;
     state->halt = 0;
     state->draw_flag = 0;
@@ -108,18 +136,19 @@ void UnimplementedInstruction(Chip8State* state)
 
 void EmulateChip8Op(Chip8State *state)
 {
+
+
     uint8_t *op = &state->memory[state->PC];
     disassembleChip8Opcode(state->memory, state->PC);
     state->PC += 2; // increment after fetching
     printf("\n");
-    // int highnib = (*op & 0xf0) >> 4;
     uint16_t opcode = CONCAT(op[0], op[1]);
     uint8_t instr = INSTR_MASK(opcode);
     switch (instr)
     {
         case 0x00: op0(state, opcode); break;
         case 0x01: op1(state, opcode); break;
-        case 0x02: UnimplementedInstruction(state); break;
+        case 0x02: op2(state, opcode); break;
         case 0x03: op3(state, opcode); break;
         case 0x04: op4(state, opcode); break;
         case 0x05: op5(state, opcode); break;
@@ -132,15 +161,26 @@ void EmulateChip8Op(Chip8State *state)
         case 0x0c: opC(state, opcode); break;
         case 0x0d: opD(state, opcode); break;
         case 0x0e: UnimplementedInstruction(state); break;
-        case 0x0f: UnimplementedInstruction(state); break;
+        case 0x0f: opF(state, opcode); break;
     }
 }
 
 void displayState(Chip8State * state) {
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 8; i++) {
         printf("V%01X: %02X  ", i, state->V[i]);
     }
-    printf("\nI: %04X  PC: %04X  SP: %04X  *SP: %04X\n", state->I, state->PC, state->SP, state->memory[state->SP]);
+    printf("\n");
+    for (int i = 8; i < 16; i++) {
+        printf("V%01X: %02X  ", i, state->V[i]);
+    }
+    int stack_pointer;
+    if(state->SP <= 0){
+        stack_pointer = 0;
+    } else {
+        stack_pointer = (state->SP)-1;
+    }
+    printf("\nI: %04X  PC: %04X  SP: %04X  *SP: %04X\nDELAY: %02X  SOUND: %02X\n",
+    state->I, state->PC, state->SP, state->stack[stack_pointer], state->delay, state->sound);
 }
 
 void op0(Chip8State *state, uint16_t opcode) {
@@ -148,8 +188,11 @@ void op0(Chip8State *state, uint16_t opcode) {
         case 0xe0: // clear screen
             memset(state->gfx, OFF, 64*32);
             break;
-        case 0xee: printf("RETURN"); break; // return from subroutine
-        default: printf("UNKNOWN 0 INSTRUCTION"); break; // usually jump to machine code routine at NNN
+        case 0xee: // Return from subroutine, pop the stack to the PC
+            state->SP--;
+            state->PC = state->stack[state->SP];
+            break;
+        default: printf("UNKNOWN 0 INSTRUCTION"); break;
     }
 }
 
@@ -163,7 +206,12 @@ void op1(Chip8State *state, uint16_t opcode) {
 	state->PC = target;
 }
 
-// void op2(Chip8State *state, uint16_t opcode);
+void op2(Chip8State *state, uint16_t opcode) {
+    // Call subroutine at nnn, push the address of the next instruction to the stack
+    state->stack[state->SP] = state->PC;
+    state->SP++;
+    state->PC = NNN_MASK(opcode);
+}
 
 void op3(Chip8State *state, uint16_t opcode) {
     // Skip the following instruction if VX == NN
@@ -197,8 +245,8 @@ void op7(Chip8State *state, uint16_t opcode) {
 }
 
 void op8(Chip8State *state, uint16_t opcode) {
-    uint8_t x = state->V[VX_MASK(opcode)];
-    uint8_t y = state->V[VY_MASK(opcode)];
+    uint8_t x = VX_MASK(opcode);
+    uint8_t y = VY_MASK(opcode);
 
     switch (LSN_MASK(opcode)) {
         case 0x0: // VX = VY
@@ -209,7 +257,8 @@ void op8(Chip8State *state, uint16_t opcode) {
             state->V[x] &= state->V[y]; break;
         case 0x3: // VX = VX XOR VY
             state->V[x] ^= state->V[y]; break;
-        case 0x4: // VX = VX + VY, VF = Carry (ie result > 255, 8-bit overflow)
+        case 0x4: // VX += VY, VF = Carry (ie result > 255, 8-bit overflow)
+        {
             uint16_t result = state->V[x] + state->V[y];
             if (result & 0xFF00) {
                 state->V[0xF] = 1;
@@ -218,27 +267,32 @@ void op8(Chip8State *state, uint16_t opcode) {
             }
             // Only set the 8-bit result in the register
             state->V[x] = (result&0xFF); break;
-        case 0x5: // VX = VX - VY, VF = !borrow (0 if a borrow occurs on underflow, otherwise 1)
+        }
+        case 0x5: // VX -= VY, VF = !borrow (0 if a borrow occurs on underflow, otherwise 1)
+        {
             uint8_t borrow = (state->V[x] > state->V[y]);
             state->V[x] -= state->V[y];
             state->V[0xF] = borrow; break;
-        case 0x6: // VX = (VX or VY, it's not clear in technical reference) >> 1, VF = LSB
+        }
+        case 0x6: // VX = VY >> 1, VF = LSB
             state->V[x] = state->V[y];
             uint8_t lsb = state->V[x] & 0x1; // least-significant bit
 			state->V[x] = state->V[x] >> 1;
 			state->V[0xF] = lsb;
             break;
         case 0x7: // VX = VY - VX, VF = !borrow (0 if a borrow occurs on underflow, otherwise 1)
+        {
             uint8_t borrow = (state->V[y] > state->V[x]);
             state->V[x] = state->V[y] - state->V[x];
             state->V[0xF] = borrow; break;
-        case 0xE: // VX = (VX or VY, it's not clear in technical reference) << 1, VF = MSB
+        }
+        case 0xE: // VX = VY << 1, VF = MSB
             state->V[x] = state->V[y];
             uint8_t msb = state->V[x] & 0x80; // most-significant bit
 			state->V[x] = state->V[x] << 1;
 			state->V[0xF] = msb;
             break;
-        default: printf("UNKNOWN 8 INSTRUCTION"); break; // usually jump to machine code routine at NNN
+        default: printf("UNKNOWN 8 INSTRUCTION"); break;
     }
 }
 
@@ -266,23 +320,21 @@ void opC(Chip8State *state, uint16_t opcode) {
 }
 
 void opD(Chip8State *state, uint16_t opcode) {
+    // Load N bytes of 8-bit sprite data into video memory at (VX,VY) coordinates
     uint8_t x = state->V[VX_MASK(opcode)] % 64;
     uint8_t y = state->V[VY_MASK(opcode)] % 32;
     uint8_t height = LSN_MASK(opcode); // number of lines of sprite data
-    uint8_t sprite_byte;
-    uint8_t sprite_pixel;
-    uint32_t *screen_pixel;
 
     state->V[0xF] = 0;
     for(int row = 0; row < height; row++){
 
-        sprite_byte = state->memory[state->I + row];
+        uint8_t sprite_byte = state->memory[state->I + row];
 
         for(int col = 0; col < 8; col++){
 
             int address = (x+col) + (y + row) * SCREEN_WIDTH;
-            sprite_pixel = sprite_byte & (0x80 >> col);
-            screen_pixel = &state->gfx[address];
+            uint8_t sprite_pixel = sprite_byte & (0x80 >> col);
+            uint32_t *screen_pixel = &state->gfx[address];
 
             // Sprite pixel is ON
             if(sprite_pixel){
@@ -297,5 +349,50 @@ void opD(Chip8State *state, uint16_t opcode) {
     state->draw_flag = 1;
 }
 
-// void opE(Chip8State *state, uint16_t opcode);
-// void opF(Chip8State *state, uint16_t opcode);
+// void opE(Chip8State *state, uint16_t opcode); NEED TO IMPLEMENT
+
+void opF(Chip8State *state, uint16_t opcode) {
+    uint8_t x = VX_MASK(opcode);
+    switch (NN_MASK(opcode)) {
+        case 0x07: // VX = Delay timer
+            state->V[x] = state->delay; break;
+        case 0x0A: // Wait for keypress, then VX = KEY
+            printf("V%01X = WAITKEY", x); break; // NEED TO IMPLEMENT
+        case 0x15: // Delay timer = VX
+            state->delay = state->V[x]; break;
+        case 0x18: // Sound timer = VX
+            state->sound = state->V[x]; break;
+        case 0x1E: // I += VX
+            state->I += state->V[x]; break;
+        case 0x29: // Set I = memory address of the font sprite of the value in VX
+            state->I = FONT_ADDRESS + (state->V[VX_MASK(opcode)] * 5) ; break;
+        case 0x33: // Store the binary coded decimal equivalent of VX in memory[I..I+2]
+        {
+            uint8_t ones, tens, hundreds;
+            uint8_t value = state->V[x];
+            ones = value % 10;
+            value = value / 10;
+            tens = value % 10;
+            hundreds = value / 10;
+            state->memory[state->I] = hundreds;
+            state->memory[state->I+1] = tens;
+            state->memory[state->I+2] = ones;
+            break;
+        }
+        case 0x55: // Store V[0..X] in memory at memory[I..I+X]
+        {
+            for(uint8_t reg = 0; reg <= x; reg++){
+                state->memory[state->I + reg] = state->V[reg];
+            }
+            break;
+        }
+        case 0x65: // Set V[0..X] from the values at memory[I..I+X]
+        {
+            for(uint8_t reg = 0; reg <= x; reg++){
+                state->V[reg] = state->memory[state->I + reg];
+            }
+            break;
+        }
+        default: printf("UNKNOWN F INSTRUCTION"); break;
+    }
+}
