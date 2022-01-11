@@ -35,6 +35,8 @@ int main(int argc, char **argv) {
 
     // Set the program counter to 0x200 and iterate over buffer
     while (c8->PC < (fsize + 0x200)) {
+        SDL_Event event;
+
         current_time = SDL_GetTicks();
         delta = current_time - previous_time;
         previous_time = current_time;
@@ -49,15 +51,37 @@ int main(int argc, char **argv) {
             }
             time_accumulator -= timer_rate;
         }
-        SDL_Event e;
-        while(SDL_PollEvent(&e)){
-            if (e.type == SDL_QUIT){
-                c8->halt = 1;
+
+        while(SDL_PollEvent(&event)){
+            switch(event.type) {
+                case SDL_QUIT: c8->halt = 1; break;
+                case SDL_KEYDOWN:
+                {
+                    if(event.key.keysym.scancode == SDL_SCANCODE_ESCAPE){
+                        c8->halt = 1;
+                    }
+                    for(int i = 0; i < 16; i++){
+                        if(event.key.keysym.scancode == SDL_keymap[i]){
+                            uint8_t key = Chip8_keymap[i];
+                            c8->key_state[key] = 1;
+                        }
+                    }
+                } break;
+                case SDL_KEYUP:
+                {
+                    for(int i = 0; i < 16; i++){
+                        if(event.key.keysym.scancode == SDL_keymap[i]){
+                            uint8_t key = Chip8_keymap[i];
+                            c8->key_state[key] = 0;
+                        }
+                    }
+                } break;
             }
         }
 
         EmulateChip8Op(c8);
         displayState(c8);
+
         printf("\n");
         if (c8->halt) {
             break;
@@ -130,7 +154,6 @@ void updateDisplay(Chip8State* chip8) {
 
 void UnimplementedInstruction(Chip8State* state)
 {
-	//pc will have advanced one, so undo that
 	printf ("Error: Unimplemented instruction\n");
 }
 
@@ -160,7 +183,7 @@ void EmulateChip8Op(Chip8State *state)
         case 0x0b: opB(state, opcode); break;
         case 0x0c: opC(state, opcode); break;
         case 0x0d: opD(state, opcode); break;
-        case 0x0e: UnimplementedInstruction(state); break;
+        case 0x0e: opE(state, opcode); break;
         case 0x0f: opF(state, opcode); break;
     }
 }
@@ -185,10 +208,10 @@ void displayState(Chip8State * state) {
 
 void op0(Chip8State *state, uint16_t opcode) {
     switch (NN_MASK(opcode)) {
-        case 0xe0: // clear screen
+        case 0xE0: // clear screen
             memset(state->gfx, OFF, 64*32);
             break;
-        case 0xee: // Return from subroutine, pop the stack to the PC
+        case 0xEE: // Return from subroutine, pop the stack to the PC
             state->SP--;
             state->PC = state->stack[state->SP];
             break;
@@ -349,7 +372,22 @@ void opD(Chip8State *state, uint16_t opcode) {
     state->draw_flag = 1;
 }
 
-// void opE(Chip8State *state, uint16_t opcode); NEED TO IMPLEMENT
+void opE(Chip8State *state, uint16_t opcode) {
+    uint8_t x = VX_MASK(opcode);
+    switch (NN_MASK(opcode)) {
+        case 0x9E: // Skip if key with the value of VX is pressed
+            if(state->key_state[state->V[x]] != 0){
+                state->PC += 2;
+            }
+            break;
+        case 0xA1: // Skip if key with the value of VX is not pressed
+            if(state->key_state[state->V[x]] == 0){
+                state->PC += 2;
+            }
+            break;
+        default: printf("UNKNOWN E INSTRUCTION"); break;
+    }
+}
 
 void opF(Chip8State *state, uint16_t opcode) {
     uint8_t x = VX_MASK(opcode);

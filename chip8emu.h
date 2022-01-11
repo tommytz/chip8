@@ -6,7 +6,7 @@
 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
-#define SCALE 15
+#define SCALE 10
 #define ON 0xFFFFFFFF
 #define OFF 0x00000000
 #define FONT_ADDRESS 0x50
@@ -20,9 +20,24 @@ typedef struct Chip8State {
 	uint8_t	   delay, sound;
 	uint8_t	   *memory;
     uint32_t    *gfx;
+	uint8_t key_state[16];
     int     halt;
 	int 	draw_flag;
 } Chip8State;
+
+int SDL_keymap[16] = {
+    SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
+    SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R,
+	SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_F,
+    SDL_SCANCODE_Z, SDL_SCANCODE_X, SDL_SCANCODE_C, SDL_SCANCODE_V
+};
+
+uint8_t Chip8_keymap[16] = {
+    0x1, 0x2, 0x3, 0xC,
+    0x4, 0x5, 0x6, 0xD,
+	0x7, 0x8, 0x9, 0xE,
+    0xA, 0x0, 0xB, 0xF
+};
 
 uint8_t fontset[FONT_SIZE] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, //0
@@ -66,5 +81,5 @@ void opA(Chip8State *state, uint16_t opcode);
 void opB(Chip8State *state, uint16_t opcode);
 void opC(Chip8State *state, uint16_t opcode);
 void opD(Chip8State *state, uint16_t opcode);
-// void opE(Chip8State *state, uint16_t opcode);
+void opE(Chip8State *state, uint16_t opcode);
 void opF(Chip8State *state, uint16_t opcode);
