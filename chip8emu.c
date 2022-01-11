@@ -224,7 +224,6 @@ void op1(Chip8State *state, uint16_t opcode) {
 	uint16_t target = NNN_MASK(opcode);
 	if (target == state->PC-2) {
 		printf("INFINITE LOOP DETECTED...\n");
-        state->halt = 1;
 	}
 	state->PC = target;
 }
@@ -395,7 +394,18 @@ void opF(Chip8State *state, uint16_t opcode) {
         case 0x07: // VX = Delay timer
             state->V[x] = state->delay; break;
         case 0x0A: // Wait for keypress, then VX = KEY
-            printf("V%01X = WAITKEY", x); break; // NEED TO IMPLEMENT
+        {
+            int key_pressed = 0;
+            for (int i = 0; i < 16; i++) {
+                if (state->key_state[i]){ // A key is pressed
+                    state->V[x] = i; // VX = KEY
+                    key_pressed = 1;
+                }
+            }
+            if(!key_pressed){
+                state->PC -= 2;
+            }
+        } break;
         case 0x15: // Delay timer = VX
             state->delay = state->V[x]; break;
         case 0x18: // Sound timer = VX
