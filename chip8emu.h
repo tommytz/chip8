@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <SDL2/SDL.h>
+#include <math.h>
 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
@@ -11,6 +12,9 @@
 #define OFF 0x00000000
 #define FONT_ADDRESS 0x50
 #define FONT_SIZE 80
+// audio Constants
+#define SAMPLE_RATE 44100.0
+#define AMPLITUDE   28000
 
 typedef struct Chip8State {
 	uint8_t    V[16]; // The 16 variable 8-bit registers V0..VF
@@ -61,6 +65,10 @@ uint8_t fontset[FONT_SIZE] = {
 
 Chip8State* InitChip8(void);
 void InitDisplay(void);
+void audio_callBack(void *userData, unsigned char *rawBuffer, int bytes);
+void InitSound();
+void closeAudio();
+void beepSound();
 void terminate(int exit_code);
 void updateDisplay(Chip8State* chip8);
 void UnimplementedInstruction(Chip8State* state);

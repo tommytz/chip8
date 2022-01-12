@@ -6,6 +6,10 @@ SDL_Renderer *renderer;
 SDL_Texture *texture;
 int pitch = 64*4;
 
+SDL_AudioSpec *audioSpec = NULL;
+SDL_AudioDeviceID audioDevice = 0;
+int sampleNR;
+
 int main(int argc, char **argv) {
     Chip8State* c8 = InitChip8();
     InitDisplay();
@@ -78,7 +82,9 @@ int main(int argc, char **argv) {
                 } break;
             }
         }
-
+        if(c8->sound){
+            beepSound();
+        }
         EmulateChip8Op(c8);
         displayState(c8);
 
@@ -117,7 +123,7 @@ Chip8State* InitChip8(void)
 }
 
 void InitDisplay(void) {
-    if(SDL_Init(SDL_INIT_VIDEO) < 0) {
+    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) {
         printf("Error: Failed to initialize SDL: %s\n", SDL_GetError());
         terminate(EXIT_FAILURE);
     }
@@ -138,10 +144,64 @@ void InitDisplay(void) {
         }
 }
 
+void audio_callBack(void *userData, unsigned char *rawBuffer, int bytes)
+{
+    short *buffer = (short *)rawBuffer;
+    int length = bytes / 2;
+    int sampleNR = (*(int *) userData);
+
+    for(int data = 0; data < length; data++, sampleNR++)
+    {
+        double time = (double)sampleNR / (double)SAMPLE_RATE;
+        buffer[data] = (short)(AMPLITUDE * sin(2.0f * M_PI * 441.0f * time));
+    }
+}
+
+void InitSound() {
+    sampleNR = 0;
+
+    audioSpec = (SDL_AudioSpec*)malloc(sizeof(SDL_AudioSpec));
+    audioSpec->freq = SAMPLE_RATE;
+    audioSpec->format = AUDIO_S8;
+    audioSpec->channels = 1;
+    audioSpec->samples = 2048;
+    audioSpec->callback = audio_callBack;
+    audioSpec->userdata = &sampleNR;
+
+    audioDevice = SDL_OpenAudioDevice(NULL, 0, audioSpec, NULL, 0);
+    if(audioDevice != 0)
+    {
+        SDL_LogError(SDL_LOG_CATEGORY_AUDIO, "Failed to open audio: %s\n", SDL_GetError());
+    }
+}
+
+void closeAudio()
+{
+    if(audioDevice != 0)
+    {
+        SDL_CloseAudioDevice(audioDevice);
+        audioDevice = 0;
+    }
+
+    if(audioSpec != 0)
+    {
+        free(audioSpec);
+        audioSpec = NULL;
+    }
+}
+
+void beepSound()
+{
+    SDL_PauseAudioDevice(audioDevice, 0);
+    SDL_Delay(40);
+    SDL_PauseAudioDevice(audioDevice, 1);
+}
+
 void terminate(int exit_code) {
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
+    closeAudio();
     SDL_Quit();
     exit(exit_code);
 }
