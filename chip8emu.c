@@ -14,7 +14,9 @@ int main(int argc, char **argv) {
     // Open rom from command line arguments. Rom name has to be in quotation marks.
     FILE *rom = fopen(argv[1], "rb"); // argv[1] is the rom name
     if (rom == NULL) {
-        printf("Error: Couldn't open %s\n", argv[1]);
+        printf("Error: Couldn't open %s\nPlease include a valid rom argument\n", argv[1]);
+        terminate();
+        free(c8);
         exit(EXIT_FAILURE);
     }
 
@@ -62,8 +64,9 @@ int main(int argc, char **argv) {
                     }
                     for(int i = 0; i < 16; i++){
                         if(event.key.keysym.scancode == SDL_keymap[i]){
-                            uint8_t key = Chip8_keymap[i];
-                            c8->key_state[key] = 1;
+                            // uint8_t key = Chip8_keymap[i];
+                            // c8->key_state[key] = 1;
+                            c8->key_state[i] = 1;
                         }
                     }
                 } break;
@@ -71,8 +74,9 @@ int main(int argc, char **argv) {
                 {
                     for(int i = 0; i < 16; i++){
                         if(event.key.keysym.scancode == SDL_keymap[i]){
-                            uint8_t key = Chip8_keymap[i];
-                            c8->key_state[key] = 0;
+                            // uint8_t key = Chip8_keymap[i];
+                            // c8->key_state[key] = 0;
+                            c8->key_state[i] = 0;
                         }
                     }
                 } break;
@@ -96,7 +100,8 @@ int main(int argc, char **argv) {
     free(c8->memory);
     free(c8->gfx);
     free(c8);
-    terminate(EXIT_SUCCESS);
+    terminate();
+    exit(EXIT_SUCCESS);
 }
 
 Chip8State* InitChip8(void)
@@ -119,7 +124,7 @@ Chip8State* InitChip8(void)
 void InitDisplay(void) {
     if(SDL_Init(SDL_INIT_VIDEO) < 0) {
         printf("Error: Failed to initialize SDL: %s\n", SDL_GetError());
-        terminate(EXIT_FAILURE);
+        terminate();
     }
     window = SDL_CreateWindow("Chip-8", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
         SCREEN_WIDTH*SCALE, SCREEN_HEIGHT*SCALE, SDL_WINDOW_SHOWN);
@@ -134,16 +139,15 @@ void InitDisplay(void) {
 
         if (!window || !renderer || !texture) {
             printf("Error: failed to initialise video: %s\n", SDL_GetError());
-            terminate(EXIT_FAILURE);
+            terminate();
         }
 }
 
-void terminate(int exit_code) {
+void terminate(void) {
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
-    exit(exit_code);
 }
 
 void updateDisplay(Chip8State* chip8) {
@@ -209,7 +213,7 @@ void displayState(Chip8State * state) {
 void op0(Chip8State *state, uint16_t opcode) {
     switch (NN_MASK(opcode)) {
         case 0xE0: // clear screen
-            memset(state->gfx, OFF, 64*32);
+            memset(state->gfx, OFF, 64*32*sizeof(uint32_t));
             state->draw_flag = 1;
             break;
         case 0xEE: // Return from subroutine, pop the stack to the PC

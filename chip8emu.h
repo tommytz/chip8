@@ -6,7 +6,7 @@
 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
-#define SCALE 10
+#define SCALE 20
 #define ON 0xFFFFFFFF
 #define OFF 0x00000000
 #define FONT_ADDRESS 0x50
@@ -25,19 +25,39 @@ typedef struct Chip8State {
 	int 	draw_flag;
 } Chip8State;
 
+/*
+Keypad         Keyboard       Array map
++-+-+-+-+      +-+-+-+-+      +-+-+-+-+
+|1|2|3|C|      |1|2|3|4|      |X|1|2|3|
++-+-+-+-+      +-+-+-+-+      +-+-+-+-+
+|4|5|6|D|      |Q|W|E|R|      |Q|W|E|A|
++-+-+-+-+  =>  +-+-+-+-+  =>  +-+-+-+-+
+|7|8|9|E|      |A|S|D|F|      |S|D|Z|C|
++-+-+-+-+      +-+-+-+-+      +-+-+-+-+
+|A|0|B|F|      |Z|X|C|V|      |4|R|F|V|
++-+-+-+-+      +-+-+-+-+      +-+-+-+-+
+*/
+
+// int SDL_keymap[16] = {
+//     SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
+//     SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R,
+// 	SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_F,
+//     SDL_SCANCODE_Z, SDL_SCANCODE_X, SDL_SCANCODE_C, SDL_SCANCODE_V
+// };
+
 int SDL_keymap[16] = {
-    SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
-    SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R,
-	SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_F,
-    SDL_SCANCODE_Z, SDL_SCANCODE_X, SDL_SCANCODE_C, SDL_SCANCODE_V
+    SDL_SCANCODE_X, SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3,
+    SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_A,
+	SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_Z, SDL_SCANCODE_C,
+    SDL_SCANCODE_4, SDL_SCANCODE_R, SDL_SCANCODE_F, SDL_SCANCODE_V
 };
 
-uint8_t Chip8_keymap[16] = {
-    0x1, 0x2, 0x3, 0xC,
-    0x4, 0x5, 0x6, 0xD,
-	0x7, 0x8, 0x9, 0xE,
-    0xA, 0x0, 0xB, 0xF
-};
+// uint8_t Chip8_keymap[16] = {
+//     0x1, 0x2, 0x3, 0xC,
+//     0x4, 0x5, 0x6, 0xD,
+// 	0x7, 0x8, 0x9, 0xE,
+//     0xA, 0x0, 0xB, 0xF
+// };
 
 uint8_t fontset[FONT_SIZE] = {
     0xF0, 0x90, 0x90, 0x90, 0xF0, //0
@@ -61,7 +81,7 @@ uint8_t fontset[FONT_SIZE] = {
 
 Chip8State* InitChip8(void);
 void InitDisplay(void);
-void terminate(int exit_code);
+void terminate(void);
 void updateDisplay(Chip8State* chip8);
 void UnimplementedInstruction(Chip8State* state);
 void EmulateChip8Op(Chip8State *state);
