@@ -210,6 +210,7 @@ void op0(Chip8State *state, uint16_t opcode) {
     switch (NN_MASK(opcode)) {
         case 0xE0: // clear screen
             memset(state->gfx, OFF, 64*32);
+            state->draw_flag = 1;
             break;
         case 0xEE: // Return from subroutine, pop the stack to the PC
             state->SP--;
