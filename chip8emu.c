@@ -52,6 +52,7 @@ int main(int argc, char **argv) {
             }
             if(c8->sound){
                 c8->sound--;
+                c8->sound_flag = 1;
             }
             time_accumulator -= timer_rate;
         }
@@ -82,8 +83,9 @@ int main(int argc, char **argv) {
                 } break;
             }
         }
-        if(c8->sound){
+        if(c8->sound_flag){
             beepSound();
+            c8->sound_flag = 0;
         }
         EmulateChip8Op(c8);
         displayState(c8);

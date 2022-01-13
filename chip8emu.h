@@ -27,9 +27,10 @@ typedef struct Chip8State {
 	uint8_t key_state[16];
     int     halt;
 	int 	draw_flag;
+    int     sound_flag;
 } Chip8State;
 
-int SDL_keymap[16] = {
+SDL_Scancode SDL_keymap[16] = {
     SDL_SCANCODE_1, SDL_SCANCODE_2, SDL_SCANCODE_3, SDL_SCANCODE_4,
     SDL_SCANCODE_Q, SDL_SCANCODE_W, SDL_SCANCODE_E, SDL_SCANCODE_R,
 	SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D, SDL_SCANCODE_F,
