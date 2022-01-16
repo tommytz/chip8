@@ -1,7 +1,7 @@
 • On Linux, before compiling it is necessary to install the SDL2 libraries using
   "sudo apt-get install libsdl2-2.0" and "sudo apt-get install libsdl2-dev".
   The application can then be compiled using the gcc on the command line with
-  “gcc chip8emu.c chip8dis.c -o -lSDL2 CHIP-8”.
+  “gcc chip8emu.c chip8dis.c -o CHIP-8 -lSDL2”.
 
 • On Windows, MinGW-w64 (or a similar system, like Cygwin) is required to run the gcc.
   The SDL library and dll is also required in the project folder (I have included these in the GitHub repository).
