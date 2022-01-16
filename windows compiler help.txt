@@ -1,0 +1,1 @@
+gcc chip8emu.c chip8dis.c -IC:\cprojects\chip8\SDL2\include -LC:\cprojects\chip8\SDL2\lib -lmingw32 -lSDL2main -lSDL2 -o test
