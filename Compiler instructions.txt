@@ -1,13 +1,11 @@
-On Windows:
-Requires installation of MinGW64 to compile on Windows.
-SDL files, including dev library and dll are required in folder.
-Compiler instructions--
-gcc chip8emu.c chip8dis.c -I[Path to \SDL2\include] -L[Path to \SDL2\lib] -lmingw32 -lSDL2main -lSDL2 -o CHIP-8
-e.g. "gcc chip8emu.c chip8dis.c -IC:\Users/Thomas/c_projects\chip8\SDL2\include -LC:\Users/Thomas/c_projects\chip8\SDL2\lib -lmingw32 -lSDL2main -lSDL2 -o CHIP-8"
+• On Linux, before compiling it is necessary to install the SDL2 libraries using
+  "sudo apt-get install libsdl2-2.0" and "sudo apt-get install libsdl2-dev".
+  The application can then be compiled using the gcc on the command line with
+  “gcc chip8emu.c chip8dis.c -o -lSDL2 CHIP-8”.
 
-On Linux:
-Requires installation of SDL2 and SDL2 dev:
-"sudo apt-get install libsdl2-2.0"
-"sudo apt-get install libsdl2-dev"
-Compiler instructions--
-gcc chip8emu.c chip8dis.c -o -lSDL2 CHIP-8
+• On Windows, MinGW-w64 (or a similar system, like Cygwin) is required to run the gcc.
+  The SDL library and dll is also required in the project folder (I have included these in the GitHub repository).
+  The application can then be compiled with “gcc chip8emu.c chip8dis.c -I[Path to \SDL2\include] -L[Path to \SDL2\lib] -lmingw32 -lSDL2main -lSDL2 -o CHIP-8”.
+  For example, on my computer I used "gcc chip8emu.c chip8dis.c -IC:\Users/Thomas/c_projects\chip8\SDL2\include -LC:\Users/Thomas/c_projects\chip8\SDL2\lib -lmingw32 -lSDL2main -lSDL2 -o CHIP-8"
+
+• To run the application, it should be called from the command line with a Chip-8 file as the second command line argument.
