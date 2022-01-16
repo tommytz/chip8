@@ -374,7 +374,6 @@ void opD(Chip8State *state, uint16_t opcode) {
         }
     }
     state->draw_flag = 1;
->>>>>>> a7a316daa715c06cc8b586ebfec044d59e08dbde
 }
 
 void opE(Chip8State *state, uint16_t opcode) {
