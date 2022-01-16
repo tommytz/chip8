@@ -211,7 +211,8 @@ void opB(Chip8State *state, uint16_t opcode) {
 
 void opC(Chip8State *state, uint16_t opcode) {
     // Set VX to a random number with a mask of NN
-    state->v[VX_MASK(opcode)] = random() & NN_MASK(opcode);
+    // state->v[VX_MASK(opcode)] = random() & NN_MASK(opcode);
+    state->v[VX_MASK(opcode)] = rand() & NN_MASK(opcode);
 }
 
 // void opD(Chip8State *state, uint16_t opcode);
