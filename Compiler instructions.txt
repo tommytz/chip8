@@ -4,3 +4,10 @@ SDL files, including dev library and dll are required in folder.
 Compiler instructions--
 gcc chip8emu.c chip8dis.c -I[Path to \SDL2\include] -L[Path to \SDL2\lib] -lmingw32 -lSDL2main -lSDL2 -o CHIP-8
 e.g. "gcc chip8emu.c chip8dis.c -IC:\Users/Thomas/c_projects\chip8\SDL2\include -LC:\Users/Thomas/c_projects\chip8\SDL2\lib -lmingw32 -lSDL2main -lSDL2 -o CHIP-8"
+
+On Linux:
+Requires installation of SDL2 and SDL2 dev:
+"sudo apt-get install libsdl2-2.0"
+"sudo apt-get install libsdl2-dev"
+Compiler instructions--
+gcc chip8emu.c chip8dis.c -o -lSDL2 CHIP-8
